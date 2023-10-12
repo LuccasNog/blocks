@@ -5,6 +5,7 @@ import 'package:fluttebloc/Blocs/client_States.dart';
 import 'package:fluttebloc/Blocs/client_bloc.dart';
 import 'package:fluttebloc/Model/client_Model.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class ClientPage extends StatefulWidget {
   const ClientPage({super.key});
@@ -20,7 +21,7 @@ class _ClientPageState extends State<ClientPage> {
     //Fazendo a iniciação do bloc
     bloc = ClientBloc();
     //Carregando a lista
-    bloc.inputClient.add(LoadClientEvent());
+    bloc.add(LoadClientEvent());
 
     super.initState();
   }
@@ -28,7 +29,7 @@ class _ClientPageState extends State<ClientPage> {
   @override
   void dispose() {
     //fechando a stream
-    bloc.inputClient.close();
+    bloc.close();
     super.dispose();
   }
 
@@ -49,38 +50,48 @@ class _ClientPageState extends State<ClientPage> {
           IconButton(
               onPressed: () {
                 //Aqui dentro vamos adicionar o bloc para habilitar
-                bloc.inputClient
-                    .add(AddClientEvent(client: Client(nome: randomName())));
+                bloc.add(AddClientEvent(client: Client(nome: randomName())));
               },
               icon: const Icon(Icons.person_add))
         ],
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(vertical: 24),
-        child: StreamBuilder<ClientState>(
-            stream: bloc.stream,
-            builder: (context, AsyncSnapshot<ClientState> snapshot) {
+        child: BlocBuilder<ClientBloc, ClientState>(
+            bloc: bloc,
+            builder: (context, state) {
               // aqui ele vai retornr o snapshot ou  lista vázia
-              final clientsList = snapshot.data?.clients ?? [];
-              print(clientsList);
-              return ListView.separated(
-                  itemBuilder: (context, index) => ListTile(
-                        leading: CircleAvatar(
-                          child: ClipRRect(
-                            child:
-                                Text(clientsList[index].nome.substring(0, 1)),
+              //final clientsList = snapshot.data?.clients ?? [];
+
+              //Fazendo verificação
+              if (state is ClientInitialState) {
+                return const Center(
+                  child: CircularProgressIndicator(),
+                );
+              } else if (state is ClientSuccessState) {
+                final clientsList = state.clients;
+
+                print(clientsList);
+                return ListView.separated(
+                    itemBuilder: (context, index) => ListTile(
+                          leading: CircleAvatar(
+                            child: ClipRRect(
+                              child:
+                                  Text(clientsList[index].nome.substring(0, 1)),
+                            ),
                           ),
+                          title: Text(clientsList[index].nome),
+                          trailing: IconButton(
+                              onPressed: () {
+                                bloc.add(RemoveClientEvent(
+                                    client: clientsList[index]));
+                              },
+                              icon: const Icon(Icons.remove)),
                         ),
-                        title: Text(clientsList[index].nome),
-                        trailing: IconButton(
-                            onPressed: () {
-                              bloc.inputClient.add(RemoveClientEvent(
-                                  client: clientsList[index]));
-                            },
-                            icon: const Icon(Icons.remove)),
-                      ),
-                  separatorBuilder: (_, __) => const Divider(),
-                  itemCount: clientsList.length);
+                    separatorBuilder: (_, __) => const Divider(),
+                    itemCount: clientsList.length);
+              }
+              return Container();
             }),
       ),
     );
